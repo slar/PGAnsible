@@ -1,0 +1,5 @@
+- name: configure timescale
+  hosts: localhost
+
+  roles:
+    - logs

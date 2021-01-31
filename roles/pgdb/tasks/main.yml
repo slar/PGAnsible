@@ -1,0 +1,52 @@
+- name: "Ensure postgres12, timescale and go is installed"
+  package:
+    name: ["postgresql12-server", "timescaledb", "go"]
+    state: present
+
+- name: "Check of postgres initdb has been called"
+  command: test -d /var/db/postgres/data12
+  register: initdb_status
+  check_mode: no
+  ignore_errors: yes
+  changed_when: no
+
+- debug:
+    msg: "initdb already done"
+  when: initdb_status.rc == 0
+
+- debug:
+    msg: "initdb not done"
+  when: initdb_status.rc != 0
+
+- name: "Initdb"
+  command: service postgresql initdb
+  when: initdb_status.rc != 0
+
+- name: "Check if timescale is enabled"
+  command: grep -q "^shared_preload_libraries.*=.*timescale" /var/db/postgres/data12/postgresql.conf
+  register: timescale_enable_status
+  check_mode: no
+  ignore_errors: yes
+  changed_when: no
+
+- name: "Get tunepostgres"
+  git:
+    repo: https://github.com/timescale/timescaledb-tune
+    dest: /tmp/timescaledb-tune
+  when: timescale_enable_status.rc != 0
+
+- name: "build tunepostgres"
+  command: sh -c "(cd /tmp/timescaledb-tune/cmd/timescaledb-tune/; go build )"
+  when: timescale_enable_status.rc != 0
+
+- name: "run tunepostgres"
+  command: sh -c "/tmp/timescaledb-tune/cmd/timescaledb-tune/timescaledb-tune -yes -conf-path /var/db/postgres/data12/postgresql.conf"
+  when: timescale_enable_status.rc != 0
+
+- name: "Ensure postgres is enabled and started"
+  service:
+    name: "postgresql"
+    enabled: yes
+    state: started
+
+

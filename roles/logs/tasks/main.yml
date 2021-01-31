@@ -1,0 +1,23 @@
+- include_role:
+    name: pgdb
+
+- name: "Ensure logging user exist"
+  community.general.postgresql_user:
+    name: logging
+    role_attr_flags: CREATEDB
+
+- name: "Ensure logging datbase exist"
+  community.general.postgresql_db:
+    name: logging
+    owner: logging
+
+- name: "Ensure timescale schema exists"
+  community.general.postgresql_query:
+    db: logging
+    query: CREATE SCHEMA IF NOT EXISTS timescale;
+
+- name: "Ensure timescale is enabled"
+  community.general.postgresql_query:
+    db: logging
+    query: CREATE EXTENSION IF NOT EXISTS timescaledb SCHEMA timescale CASCADE;
+
